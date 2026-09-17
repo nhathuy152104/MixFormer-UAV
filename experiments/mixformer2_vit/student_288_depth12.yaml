@@ -30,7 +30,7 @@ DATA:
     SAMPLE_PER_EPOCH: 60000
   VAL:
     DATASETS_NAME:
-    - GOT10K_votval
+    - 
     DATASETS_RATIO:
     - 1
     SAMPLE_PER_EPOCH: 10000
