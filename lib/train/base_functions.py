@@ -141,18 +141,18 @@ def build_dataloaders(cfg, settings):
                              num_workers=cfg.TRAIN.NUM_WORKER, drop_last=True, stack_dim=1, sampler=train_sampler)
 
     # Validation samplers and loaders
-    dataset_val = sampler.TrackingSampler(datasets=names2datasets(cfg.DATA.VAL.DATASETS_NAME, settings, opencv_loader),
-                                          p_datasets=cfg.DATA.VAL.DATASETS_RATIO,
-                                          samples_per_epoch=cfg.DATA.VAL.SAMPLE_PER_EPOCH,
-                                          max_gap=cfg.DATA.MAX_SAMPLE_INTERVAL, num_search_frames=settings.num_search,
-                                          num_template_frames=settings.num_template, processing=data_processing_val,
-                                          frame_sample_mode=sampler_mode, train_cls=train_score, pos_prob=0.5)
-    val_sampler = DistributedSampler(dataset_val) if settings.local_rank != -1 else None
-    loader_val = LTRLoader('val', dataset_val, training=False, batch_size=cfg.TRAIN.BATCH_SIZE,
-                           num_workers=cfg.TRAIN.NUM_WORKER, drop_last=True, stack_dim=1, sampler=val_sampler,
-                           epoch_interval=cfg.TRAIN.VAL_EPOCH_INTERVAL)
+    # dataset_val = sampler.TrackingSampler(datasets=names2datasets(cfg.DATA.VAL.DATASETS_NAME, settings, opencv_loader),
+    #                                       p_datasets=cfg.DATA.VAL.DATASETS_RATIO,
+    #                                       samples_per_epoch=cfg.DATA.VAL.SAMPLE_PER_EPOCH,
+    #                                       max_gap=cfg.DATA.MAX_SAMPLE_INTERVAL, num_search_frames=settings.num_search,
+    #                                       num_template_frames=settings.num_template, processing=data_processing_val,
+    #                                       frame_sample_mode=sampler_mode, train_cls=train_score, pos_prob=0.5)
+    # val_sampler = DistributedSampler(dataset_val) if settings.local_rank != -1 else None
+    # loader_val = LTRLoader('val', dataset_val, training=False, batch_size=cfg.TRAIN.BATCH_SIZE,
+    #                        num_workers=cfg.TRAIN.NUM_WORKER, drop_last=True, stack_dim=1, sampler=val_sampler,
+    #                        epoch_interval=cfg.TRAIN.VAL_EPOCH_INTERVAL)
 
-    return loader_train, loader_val
+    return loader_train, None
 
 
 def get_optimizer_scheduler(net, cfg):
