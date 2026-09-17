@@ -21,10 +21,7 @@ DATA:
     NUMBER: 2
   TRAIN:
     DATASETS_NAME:
-    - GOT10K_vottrain
-    - LASOT
-    - COCO17
-    - TRACKINGNET
+    - UAVAntiUAV
     DATASETS_RATIO:
     - 1
     - 1
@@ -44,7 +41,7 @@ MODEL:
     DEPTH: 12
     MLP_RATIO: 4
     PRETRAINED: True
-    PRETRAINED_PATH: './models/mae_pretrain_vit_base.pth'
+    PRETRAINED_PATH: '/kaggle/input/models/huythedreamer/mixformerv2-base/pytorch/default/1/mixformerv2_base.pth.tar'
   HEAD_TYPE: MLP
   HIDDEN_DIM: 768
   PREDICT_MASK: false
