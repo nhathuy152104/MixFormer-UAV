@@ -115,7 +115,7 @@ def run(settings):
 
     remove_mode = (len(cfg.TRAIN.REMOVE_LAYERS) > 0)
     print("Remove mode: ", remove_mode)
-    trainer = LTRTrainer(actor, [loader_train, loader_val], optimizer, settings, lr_scheduler=lr_scheduler, use_amp=use_amp, remove_mode=remove_mode)
+    trainer = LTRTrainer(actor, [loader_train], optimizer, settings, lr_scheduler=lr_scheduler, use_amp=use_amp, remove_mode=remove_mode)
 
     # train process
     trainer.train(cfg.TRAIN.EPOCH, load_latest=True, fail_safe=True, distill=True)
