@@ -171,8 +171,7 @@ class BaseTrainer:
 
         if checkpoint is None:
             # Load most recent checkpoint
-            checkpoint_list = sorted(glob.glob('{}/{}/{}_ep*.pth.tar'.format(self._checkpoint_dir,
-                                                                             self.settings.project_path, net_type)))
+            checkpoint_list = ['/kaggle/input/models/huynhat15/mixformerv2/pytorch/default/1/MixFormer_ep0005.pth.tar']
             if checkpoint_list:
                 checkpoint_path = checkpoint_list[-1]
                 print('Resume training from', checkpoint_path)
@@ -197,7 +196,7 @@ class BaseTrainer:
             raise TypeError
 
         # Load network
-        checkpoint_dict = torch.load(checkpoint_path, map_location='cpu', weights_only = False)['model']
+        checkpoint_dict = torch.load(checkpoint_path, map_location='cpu', weights_only = False)
         print("Loading checkpoint from ", checkpoint_path)
 
         assert net_type == checkpoint_dict['net_type'], 'Network is not of correct type.'
