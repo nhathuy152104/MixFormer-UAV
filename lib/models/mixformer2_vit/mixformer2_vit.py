@@ -303,10 +303,26 @@ def get_mixformer_vit(config, train):
     if config.MODEL.BACKBONE.PRETRAINED and train:
         ckpt_path = config.MODEL.BACKBONE.PRETRAINED_PATH
         ckpt = torch.load(ckpt_path, map_location='cpu', weights_only = False)
+        
+        # TRÍCH XUẤT STATE_DICT TỪ BÊN TRONG CHECKPOINT
+        if 'net' in ckpt:
+            ckpt = ckpt['net']
+        elif 'model' in ckpt:
+            ckpt = ckpt['model']
+        elif 'state_dict' in ckpt:
+            ckpt = ckpt['state_dict']
+
         new_dict = {}
         for k, v in ckpt.items():
             if 'pos_embed' not in k and 'mask_token' not in k:
-                new_dict[k] = v
+                # Vẫn giữ logic cắt bỏ 'backbone.' phòng trường hợp các key bên trong 'net' có tiền tố này
+                if k.startswith('backbone.'):
+                    new_key = k.replace('backbone.', '', 1)
+                else:
+                    new_key = k
+                
+                new_dict[new_key] = v
+                
         missing_keys, unexpected_keys = vit.load_state_dict(new_dict, strict=False)
         if is_main_process():
             print("Load pretrained model from {}\n".format(ckpt_path))
