@@ -302,7 +302,7 @@ def get_mixformer_vit(config, train):
 
     if config.MODEL.BACKBONE.PRETRAINED and train:
         ckpt_path = config.MODEL.BACKBONE.PRETRAINED_PATH
-        ckpt = torch.load(ckpt_path, map_location='cpu', weights_only = False)
+        ckpt = torch.load(ckpt_path, map_location='cpu', weights_only = False)['net']
         print(type(ckpt))
         new_dict = {}
         for k, v in ckpt.items():
