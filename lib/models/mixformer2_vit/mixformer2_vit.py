@@ -173,7 +173,7 @@ class VisionTransformer(timm.models.vision_transformer.VisionTransformer):
         self.patch_embed = embed_layer(
             patch_size=patch_size, in_chans=in_chans, embed_dim=embed_dim)
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  # stochastic depth decay rule
-        self.backbone = nn.Sequential(*[
+        self.blocks = nn.Sequential(*[
             Block(
                 dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias,
                 drop=drop_rate, attn_drop=attn_drop_rate, drop_path=dpr[i],
@@ -304,7 +304,7 @@ def get_mixformer_vit(config, train):
         ckpt_path = config.MODEL.BACKBONE.PRETRAINED_PATH
         ckpt = torch.load(ckpt_path, map_location='cpu', weights_only = False)
         
-        # Trích xuất state_dict
+        # TRÍCH XUẤT STATE_DICT TỪ BÊN TRONG CHECKPOINT
         if 'net' in ckpt:
             ckpt = ckpt['net']
         elif 'model' in ckpt:
@@ -314,17 +314,16 @@ def get_mixformer_vit(config, train):
 
         new_dict = {}
         for k, v in ckpt.items():
-            # XÓA DÒNG IF CHẶN pos_embed Ở ĐÂY. LẤY HẾT!
-            
-            # Xóa các tiền tố thừa (module, backbone)
-            new_key = k.replace('module.', '')
-            new_key = new_key.replace('backbone.', '')
-            
-            new_dict[new_key] = v
+            if 'pos_embed' not in k and 'mask_token' not in k:
+                # Vẫn giữ logic cắt bỏ 'backbone.' phòng trường hợp các key bên trong 'net' có tiền tố này
+                if k.startswith('backbone.'):
+                    new_key = k.replace('backbone.', '', 1)
+                else:
+                    new_key = k
                 
-        # Load vào model
+                new_dict[new_key] = v
+                
         missing_keys, unexpected_keys = vit.load_state_dict(new_dict, strict=False)
-        
         if is_main_process():
             print("Load pretrained model from {}\n".format(ckpt_path))
             print("missing keys:", missing_keys)
