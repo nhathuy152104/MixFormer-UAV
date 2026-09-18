@@ -38,7 +38,7 @@ MODEL:
     DEPTH: 12
     MLP_RATIO: 4
     PRETRAINED: True
-    PRETRAINED_PATH: '/kaggle/input/models/huythedreamer/mixformerv2-base/pytorch/default/1/mixformerv2_base.pth.tar'
+    PRETRAINED_PATH: '/kaggle/input/models/huynhat15/mixformerv2/pytorch/default/1/MixFormer_ep0005.pth.tar'
   HEAD_TYPE: MLP
   HIDDEN_DIM: 768
   PREDICT_MASK: false
