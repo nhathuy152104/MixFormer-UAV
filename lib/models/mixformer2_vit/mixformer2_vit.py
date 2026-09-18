@@ -303,10 +303,26 @@ def get_mixformer_vit(config, train):
     if config.MODEL.BACKBONE.PRETRAINED and train:
         ckpt_path = config.MODEL.BACKBONE.PRETRAINED_PATH
         ckpt = torch.load(ckpt_path, map_location='cpu', weights_only = False)
+        
+        # 1. Trích xuất state_dict
+        if 'net' in ckpt:
+            ckpt = ckpt['net']
+        elif 'model' in ckpt:
+            ckpt = ckpt['model']
+        elif 'state_dict' in ckpt:
+            ckpt = ckpt['state_dict']
+
         new_dict = {}
         for k, v in ckpt.items():
+            # Cố tình bỏ qua pos_embed và mask_token để khởi tạo mới
             if 'pos_embed' not in k and 'mask_token' not in k:
-                new_dict[k] = v
+                
+                # 2. Xóa các tiền tố thừa một cách triệt để
+                new_key = k.replace('module.', '')    # Xóa prefix của đa GPU (nếu có)
+                new_key = new_key.replace('backbone.', '') # Xóa prefix của tracking framework (nếu có)
+                
+                new_dict[new_key] = v
+                
         missing_keys, unexpected_keys = vit.load_state_dict(new_dict, strict=False)
         if is_main_process():
             print("Load pretrained model from {}\n".format(ckpt_path))
