@@ -12,7 +12,7 @@ python tracking/train.py --script mixformer2_vit \
  --save_dir . \
  --distill 1 --script_teacher mixformer_vit --config_teacher teacher_mixvit_b \
  --checkpoint_teacher_path ./models/mixformer_vit_base_online.pth.tar \
- --mode multiple --nproc_per_node 8
+ --mode multiple --nproc_per_node 2
 
 
 ### Stage2 Deep-to-Shallow Distillation
@@ -24,7 +24,7 @@ python tracking/train.py --script mixformer2_vit \
 #  --save_dir . \
 #  --distill 1 --script_teacher mixformer2_vit --config_teacher teacher_288_depth12 \
 #  --checkpoint_teacher_path PATH/TO/STAGE1/CHECKPOINT \
-#  --mode multiple --nproc_per_node 8
+#  --mode multiple --nproc_per_node 2
 
 
 ## 2.2 Continuing finetune
