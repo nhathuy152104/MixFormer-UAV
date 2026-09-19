@@ -61,12 +61,15 @@ class MixFormer(BaseTracker):
         search = self.preprocessor.process(x_patch_arr)
         with torch.no_grad():
             out_dict = self.network(self.template, self.online_template, search, softmax=True)
+        crop_bbox = info['gt_bbox']   # GT của frame hiện tại
 
         pred_boxes = out_dict['pred_boxes'].view(-1, 4)
         pred_box = (pred_boxes.mean(dim=0) * self.params.search_size / resize_factor).tolist()  # (cx, cy, w, h) [0,1]
         # get the final box result
-        self.state = clip_box(self.map_box_back(pred_box, resize_factor), H, W, margin=10)
-
+        self.state = clip_box(
+                self.map_box_back(pred_box, resize_factor, crop_bbox),
+                H, W, margin=10
+            )
         # for debug
         if self.debug:
             x1, y1, w, h = self.state
@@ -83,12 +86,15 @@ class MixFormer(BaseTracker):
         else:
             return {"target_bbox": self.state}
 
-    def map_box_back(self, pred_box: list, resize_factor: float):
-        cx_prev, cy_prev = self.state[0] + 0.5 * self.state[2], self.state[1] + 0.5 * self.state[3]
+    def map_box_back(self, pred_box, resize_factor, crop_bbox):
+        cx_ref = crop_bbox[0] + 0.5 * crop_bbox[2]
+        cy_ref = crop_bbox[1] + 0.5 * crop_bbox[3]
+
         cx, cy, w, h = pred_box
         half_side = 0.5 * self.params.search_size / resize_factor
-        cx_real = cx + (cx_prev - half_side)
-        cy_real = cy + (cy_prev - half_side)
+
+        cx_real = cx + cx_ref - half_side
+        cy_real = cy + cy_ref - half_side
         return [cx_real - 0.5 * w, cy_real - 0.5 * h, w, h]
 
     def map_box_back_batch(self, pred_box: torch.Tensor, resize_factor: float):
