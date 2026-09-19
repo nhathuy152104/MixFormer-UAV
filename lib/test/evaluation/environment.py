@@ -77,6 +77,8 @@ class EnvSettings_ITP:
         self.got_packed_results_path = ''
         self.got_reports_path = ''
         self.tn_packed_results_path = ''
+        self.uavantiuav_path = os.path.join(data_dir, "")
+
 
 
 def create_default_local_file_ITP_test(workspace_dir, data_dir, save_dir):
