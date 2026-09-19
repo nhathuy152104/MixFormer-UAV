@@ -127,6 +127,7 @@ class Tracker:
             out = {}
 
         prev_output = OrderedDict(out)
+    
         init_default = {'target_bbox': init_info.get('init_bbox'),
                         'time': time.time() - start_time}
         if tracker.params.save_all_boxes:
@@ -144,8 +145,11 @@ class Tracker:
             info['previous_output'] = prev_output
             if len(seq.ground_truth_rect) > 1:
                 info['gt_bbox'] = seq.ground_truth_rect[frame_num]
-            out = tracker.track(image, info)
-            prev_output = OrderedDict(out)
+            if (info['gt_bbox'][2] == 0  or info['gt_bbox'][3] == 0):
+                out = {"target_bbox": [0,0,0,0]}
+            else:     
+                out = tracker.track(image, info)
+                prev_output = OrderedDict(out)
             _store_outputs(out, {'time': time.time() - start_time})
 
         for key in ['target_bbox', 'all_boxes', 'all_scores']:

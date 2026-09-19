@@ -28,7 +28,6 @@ def sample_target(im, target_bb, search_area_factor, output_sz=None, mask=None):
     else:
         x, y, w, h = target_bb
     # Crop image
-    print(x,y,w,h)
     crop_sz = math.ceil(math.sqrt(w * h) * search_area_factor)
 
     # if crop_sz < 1:
