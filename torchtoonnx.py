@@ -35,47 +35,58 @@ network.load_state_dict(
 
 network.eval()
 
-# 1. Sửa lỗi đánh máy phần tạo dữ liệu giả (Dummy Inputs)
-# Đảm bảo chúng cùng kiểu dữ liệu (float) và trên cùng thiết bị (CPU/GPU) với model
-template_input = torch.randn(1, 3, 128, 128).float()
-onlinetemplate_input = torch.randn(1, 3, 128, 128).float()
-search_input = torch.randn(1, 3, 288, 288).float()
+network = network.cpu()
+network.eval()
 
+# Đảm bảo self.indice trong lớp Head nằm trên CPU (sửa lỗi lệch device)
+for m in network.modules():
+    if hasattr(m, 'indice') and isinstance(m.indice, torch.Tensor):
+        m.indice = m.indice.cpu()
 
+# 2. Tạo Dummy Inputs trên CPU
+template_input = torch.randn(1, 3, 128, 128, device='cpu').float()
+onlinetemplate_input = torch.randn(1, 3, 128, 128, device='cpu').float()
+search_input = torch.randn(1, 3, 288, 288, device='cpu').float()
+
+# 3. Tạo Wrapper để giấu các biến boolean (softmax, run_score_head) khỏi ONNX Tracer
 class MixFormerONNXWrapper(torch.nn.Module):
     def __init__(self, model):
         super().__init__()
         self.model = model
 
     def forward(self, template, online_template, search):
-        # Truyền tĩnh softmax=True (hoặc False tùy cấu hình của bạn)
-        # Các tham số khác như run_score_head để default
-        pred_boxes = self.model(
+        # Trả về trực tiếp pred_boxes (có thể tuỳ chỉnh tùy vào hàm forward của bạn)
+        return self.model(
             template=template, 
             online_template=online_template, 
             search=search, 
             softmax=True, 
             run_score_head=True
         )
-        return pred_boxes
 
-# Bọc mô hình
 onnx_model = MixFormerONNXWrapper(network)
 onnx_model.eval()
 
-onnx_file_path = "mixformer2_vit.onnx"
+onnx_file_path = "mixformer2_vit_opset10.onnx"
+print("Đang tiến hành export sang ONNX (Opset 10)...")
 
-print("Đang tiến hành export sang ONNX...")
-torch.onnx.export(
-    onnx_model,                                     # Mô hình đã được bọc
-    (template_input, onlinetemplate_input, search_input), # Tuple chứa các input tensors
-    onnx_file_path,                                 # Đường dẫn lưu file
-    export_params=True,                             # Lưu trọng số vào trong file ONNX
-    opset_version=10,                               # Opset version (11 hoặc 12, 13 phù hợp cho Transformer)
-    do_constant_folding=True,                       # Tối ưu hóa (tính trước các hằng số)
-    input_names=['template', 'online_template', 'search'], # Đặt tên cho các input node
-    output_names=['pred_boxes'],                    # Đặt tên cho output node
-    
-)
+# 4. Export sang ONNX với Opset 10
+with torch.no_grad():
+    torch.onnx.export(
+        onnx_model,
+        (template_input, onlinetemplate_input, search_input),
+        onnx_file_path,
+        export_params=True,
+        opset_version=10,           # <--- CHỈ ĐỊNH PHIÊN BẢN 10
+        do_constant_folding=True,
+        input_names=['template', 'online_template', 'search'],
+        output_names=['pred_boxes'],
+        dynamic_axes={
+            'template': {0: 'batch_size'},
+            'online_template': {0: 'batch_size'},
+            'search': {0: 'batch_size'},
+            'pred_boxes': {0: 'batch_size'}
+        }
+    )
 
-print(f"Export thành công! File lưu tại: {onnx_file_path}")
+print(f"Export thành công: {onnx_file_path}")

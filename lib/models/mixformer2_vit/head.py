@@ -23,7 +23,8 @@ class MlpHead(nn.Module):
                                           for i, (n, k) in enumerate(zip([in_dim] + h, h + [out_dim]))])
  
         with torch.no_grad():
-            self.indice = torch.arange(0, feat_sz).unsqueeze(0).cuda() * stride # (1, feat_sz)
+            # self.indice = torch.arange(0, feat_sz).unsqueeze(0).cuda() * stride # (1, feat_sz)
+            self.register_buffer('indice', torch.arange(0, feat_sz).view(1, -1).float())
 
     def forward(self, reg_tokens, softmax):
         """
