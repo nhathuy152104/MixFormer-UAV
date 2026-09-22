@@ -71,7 +71,7 @@ torch.onnx.export(
     (template_input, onlinetemplate_input, search_input), # Tuple chứa các input tensors
     onnx_file_path,                                 # Đường dẫn lưu file
     export_params=True,                             # Lưu trọng số vào trong file ONNX
-    opset_versio=10,                               # Opset version (11 hoặc 12, 13 phù hợp cho Transformer)
+    opset_version=10,                               # Opset version (11 hoặc 12, 13 phù hợp cho Transformer)
     do_constant_folding=True,                       # Tối ưu hóa (tính trước các hằng số)
     input_names=['template', 'online_template', 'search'], # Đặt tên cho các input node
     output_names=['pred_boxes'],                    # Đặt tên cho output node
