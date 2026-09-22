@@ -34,10 +34,6 @@ network.load_state_dict(
 )
 
 network.eval()
-template_input = torch.radn(1,3,128,128)  
-onlinetemplate_input = torch.radn(1,3,128,128)
-search_input = torch.rann(1,3,288,288)
-
 
 # 1. Sửa lỗi đánh máy phần tạo dữ liệu giả (Dummy Inputs)
 # Đảm bảo chúng cùng kiểu dữ liệu (float) và trên cùng thiết bị (CPU/GPU) với model
