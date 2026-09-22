@@ -30,13 +30,12 @@ checkpoint = torch.load(
 
 network.load_state_dict(
     checkpoint['net'],
-    strict=True
+    strict=False
 )
 
 network.eval()
 
 network = network.cpu()
-network.eval()
 
 # Đảm bảo self.indice trong lớp Head nằm trên CPU (sửa lỗi lệch device)
 for m in network.modules():
