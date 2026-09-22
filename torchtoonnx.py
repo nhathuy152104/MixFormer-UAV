@@ -19,7 +19,7 @@ def get_parameters(tracker_params=None):
             setattr(params, param_k, v)
     return params
 
-params = get_parameters("mixformver2_vit")
+params = get_parameters()
 network = build_mixformer2_vit(params.cfg)
 
 checkpoint = torch.load(
