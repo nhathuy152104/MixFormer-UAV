@@ -76,16 +76,11 @@ with torch.no_grad():
         (template_input, onlinetemplate_input, search_input),
         onnx_file_path,
         export_params=True,
-        opset_version=11,           # <--- CHỈ ĐỊNH PHIÊN BẢN 10
+        opset_version=12,           # <--- CHỈ ĐỊNH PHIÊN BẢN 10
         do_constant_folding=True,
         input_names=['template', 'online_template', 'search'],
         output_names=['pred_boxes'],
-        dynamic_axes={
-            'template': {0: 'batch_size'},
-            'online_template': {0: 'batch_size'},
-            'search': {0: 'batch_size'},
-            'pred_boxes': {0: 'batch_size'}
-        }
+
     )
 
 print(f"Export thành công: {onnx_file_path}")
