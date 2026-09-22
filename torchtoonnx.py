@@ -76,7 +76,7 @@ with torch.no_grad():
         (template_input, onlinetemplate_input, search_input),
         onnx_file_path,
         export_params=True,
-        opset_version=10,           # <--- CHỈ ĐỊNH PHIÊN BẢN 10
+        opset_version=11,           # <--- CHỈ ĐỊNH PHIÊN BẢN 10
         do_constant_folding=True,
         input_names=['template', 'online_template', 'search'],
         output_names=['pred_boxes'],
