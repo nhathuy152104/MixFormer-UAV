@@ -356,7 +356,7 @@ class MixFormer(nn.Module):
         out['reg_tokens'] = reg_tokens
         out['distill_feat_list'] = distill_feat_list
 
-        return out
+        return out['pred_boxes']
 
     def forward_test(self, search, softmax, run_score_head=True, gt_bboxes=None):
         # search: (b, c, h, w)
