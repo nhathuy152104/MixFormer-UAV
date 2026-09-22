@@ -22,10 +22,8 @@ def get_parameters(tracker_params=None):
 params = get_parameters()
 network = build_mixformer2_vit(params.cfg)
 
-checkpoint = torch.load(
-    "/home/arsene_lupin/HuyWorkspace/VtWork/weights/"
-    "MixFormerV2/train/mixformer2_vit/student_288_depth12/"
-    "MixFormer_ep0010.pth.tar",
+checkpoint = torch.load(    
+    "/kaggle/input/models/huynhat15/mixformerv2/pytorch/ep0010/1/MixFormer_ep0010.pth.tar",
     map_location='cpu',
     weights_only=False
 )
