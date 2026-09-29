@@ -38,13 +38,23 @@ class PatchEmbed(nn.Module):
         self.flatten = flatten
         hidden_dim = embed_dim // 2  # Hoặc 64/128 tùy dung lượng model
         self.proj = nn.Sequential(
-            # Stage 1: Downsample 4x (Stride 4)
-            nn.Conv2d(in_chans, hidden_dim, kernel_size=7, stride=4, padding=3),
-            nn.BatchNorm2d(hidden_dim),
-            nn.GELU(), # Hoặc ReLU
+            # Stage 1: Downsample 2x (Stride 2)
+            nn.Conv2d(in_chans, hidden_dim // 4, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(hidden_dim // 4),
+            nn.ReLU(),
             
-            # Stage 2: Downsample 4x tiếp (Stride 4) -> Tổng cộng 16x
-            nn.Conv2d(hidden_dim, embed_dim, kernel_size=7, stride=4, padding=3),
+            # Stage 2: Downsample 4x (Stride 2)
+            nn.Conv2d(hidden_dim // 4, hidden_dim // 2, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(hidden_dim // 2),
+            nn.ReLU(),
+            
+            # Stage 3: Downsample 8x (Stride 2)
+            nn.Conv2d(hidden_dim // 2, hidden_dim, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(hidden_dim),
+            nn.ReLU(),
+            
+            # Stage 4: Downsample 16x (Stride 2)
+            nn.Conv2d(hidden_dim, embed_dim, kernel_size=3, stride=2, padding=1),
         )
         self.norm = norm_layer(embed_dim) if norm_layer else nn.Identity()
 
