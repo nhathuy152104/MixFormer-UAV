@@ -313,7 +313,7 @@ def get_mixformer_vit(config, train):
     elif config.MODEL.VIT_TYPE == 'base_patch16':
         vit = VisionTransformer(
             img_size_s=img_size_s, img_size_t=img_size_t,
-            patch_size=16, embed_dim=384, depth=config.MODEL.BACKBONE.DEPTH, num_heads=12, mlp_ratio=config.MODEL.BACKBONE.MLP_RATIO, qkv_bias=True,
+            patch_size=16, embed_dim=768, depth=8, num_heads=12, mlp_ratio=config.MODEL.BACKBONE.MLP_RATIO, qkv_bias=True,
             norm_layer=partial(nn.LayerNorm, eps=1e-6), drop_path_rate=0.1)
     else:
         raise KeyError(f"VIT_TYPE shoule set to 'large_patch16' or 'base_patch16'")
