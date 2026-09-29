@@ -178,7 +178,8 @@ class VisionTransformer(timm.models.vision_transformer.VisionTransformer):
                  drop_path_rate=0., embed_layer=PatchEmbed, norm_layer=None, act_layer=None):
         super(timm.models.vision_transformer.VisionTransformer, self).__init__()
 
-        self.patch_embed = nn.PixelUnshuffle(downscale_factor=patch_size)
+        self.patch_embed = embed_layer(
+            patch_size=patch_size, in_chans=in_chans, embed_dim=embed_dim)
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  # stochastic depth decay rule
         self.blocks = nn.Sequential(*[
             Block(
