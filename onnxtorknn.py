@@ -3,7 +3,7 @@ import sys
 from rknn.api import RKNN
 
 DATASET_PATH = '../../../datasets/COCO/coco_subset_20.txt'
-DEFAULT_RKNN_PATH = '../model/yolov5.rknn'
+DEFAULT_RKNN_PATH = '/home/arsene_lupin/HuyWorkspace/VtWork/weights/MixFormer'
 DEFAULT_QUANT = False
 def parse_arg():
     if len(sys.argv) < 3:

@@ -1,5 +1,6 @@
 import math
 from functools import partial
+from typing import Dict
 
 import numpy as np
 import torch
@@ -13,6 +14,7 @@ from lib.utils.misc import is_main_process
 from lib.models.mixformer2_vit.head import build_box_head
 from lib.utils.box_ops import box_xyxy_to_cxcywh, box_cxcywh_to_xyxy
 from lib.models.mixformer_vit.pos_util import get_2d_sincos_pos_embed
+from lib.models.mixformer2_vit.convert_ckpt import remove_layers
 
 from einops import rearrange
 from itertools import repeat
@@ -36,16 +38,8 @@ class PatchEmbed(nn.Module):
         super().__init__()
         patch_size = to_2tuple(patch_size)
         self.flatten = flatten
-        hidden_dim = embed_dim // 2  # Hoặc 64/128 tùy dung lượng model
-        self.proj = nn.Sequential(
-            # Stage 1: Downsample 4x (Stride 4)
-            nn.Conv2d(in_chans, hidden_dim, kernel_size=7, stride=4, padding=3),
-            nn.BatchNorm2d(hidden_dim),
-            nn.GELU(), # Hoặc ReLU
-            
-            # Stage 2: Downsample 4x tiếp (Stride 4) -> Tổng cộng 16x
-            nn.Conv2d(hidden_dim, embed_dim, kernel_size=7, stride=4, padding=3),
-        )
+
+        self.proj = nn.Conv2d(in_chans, embed_dim, kernel_size=patch_size, stride=patch_size)
         self.norm = norm_layer(embed_dim) if norm_layer else nn.Identity()
 
     def forward(self, x):
@@ -141,7 +135,7 @@ class Attention(nn.Module):
 class Block(nn.Module):
     def __init__(
             self, dim, num_heads, mlp_ratio=4., qkv_bias=False, drop=0., attn_drop=0.,
-            drop_path=0., act_layer=nn.ReLU, norm_layer=nn.LayerNorm):
+            drop_path=0., act_layer=nn.GELU, norm_layer=nn.LayerNorm):
         super().__init__()
         self.norm1 = norm_layer(dim)
         self.attn = Attention(dim, num_heads=num_heads, qkv_bias=qkv_bias, attn_drop=attn_drop, proj_drop=drop)
@@ -154,9 +148,9 @@ class Block(nn.Module):
         self.drop_path2 = DropPath(drop_path) if drop_path > 0. else nn.Identity()
         self.dim = dim
 
-    def forward(self, x, t_h, t_w, s_h, s_w):
-        x = x + self.drop_path1(self.attn(self.norm1(x), t_h, t_w, s_h, s_w))
-        x = x + self.drop_path2(self.mlp(self.norm2(x)))
+    def forward(self, x, t_h, t_w, s_h, s_w, remove_rate=1.0):
+        x = x + remove_rate * self.drop_path1(self.attn(self.norm1(x), t_h, t_w, s_h, s_w))
+        x = x + remove_rate * self.drop_path2(self.mlp(self.norm2(x)))
         return x
 
     def forward_test(self, x, s_h, s_w):
@@ -175,16 +169,20 @@ class VisionTransformer(timm.models.vision_transformer.VisionTransformer):
     """
     def __init__(self, img_size_s=256, img_size_t=128, patch_size=16, in_chans=3, num_classes=1000, embed_dim=768,
                  depth=12, num_heads=12, mlp_ratio=4., qkv_bias=True, drop_rate=0., attn_drop_rate=0.,
-                 drop_path_rate=0., embed_layer=PatchEmbed, norm_layer=None, act_layer=None):
+                 drop_path_rate=0., embed_layer=PatchEmbed, norm_layer=None, act_layer=None,
+                 remove_layers=[]):
         super(timm.models.vision_transformer.VisionTransformer, self).__init__()
 
-        self.patch_embed = nn.PixelUnshuffle(downscale_factor=patch_size)
+        self.patch_embed = embed_layer(
+            patch_size=patch_size, in_chans=in_chans, embed_dim=embed_dim)
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  # stochastic depth decay rule
         self.blocks = nn.Sequential(*[
             Block(
                 dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias,
                 drop=drop_rate, attn_drop=attn_drop_rate, drop_path=dpr[i],
                 norm_layer=norm_layer) for i in range(depth)])
+
+        self.remove_layers = remove_layers
 
         self.feat_sz_s = img_size_s // patch_size
         self.feat_sz_t = img_size_t // patch_size
@@ -214,7 +212,7 @@ class VisionTransformer(timm.models.vision_transformer.VisionTransformer):
         if is_main_process():
             print("Initialize pos embed with fixed sincos embedding.")
 
-    def forward(self, x_t, x_ot, x_s):
+    def forward(self, x_t, x_ot, x_s, remove_rate_cur_epoch=1.0):
         """
         :param x_t: (batch, c, 128, 128)
         :param x_s: (batch, c, 288, 288)
@@ -240,7 +238,11 @@ class VisionTransformer(timm.models.vision_transformer.VisionTransformer):
         distill_feat_list = []
 
         for i, blk in enumerate(self.blocks):
-            x = blk(x, H_t, W_t, H_s, W_s)
+            if i in self.remove_layers:
+                remove_rate = remove_rate_cur_epoch
+            else:
+                remove_rate = 1.0
+            x = blk(x, H_t, W_t, H_s, W_s, remove_rate=remove_rate)
             distill_feat_list.append(x)
 
         x_t, x_ot, x_s, reg_tokens = torch.split(x, [H_t*W_t, H_t*W_t, H_s*W_s, 4], dim=1)
@@ -298,44 +300,17 @@ def get_mixformer_vit(config, train):
         vit = VisionTransformer(
             img_size_s=img_size_s, img_size_t=img_size_t,
             patch_size=16, embed_dim=1024, depth=24, num_heads=16, mlp_ratio=4, qkv_bias=True,
-            norm_layer=partial(nn.LayerNorm, eps=1e-6), drop_path_rate=0.1)
+            norm_layer=partial(nn.LayerNorm, eps=1e-6), drop_path_rate=0.1,
+            remove_layers=config.TRAIN.REMOVE_LAYERS)
     elif config.MODEL.VIT_TYPE == 'base_patch16':
         vit = VisionTransformer(
             img_size_s=img_size_s, img_size_t=img_size_t,
             patch_size=16, embed_dim=768, depth=config.MODEL.BACKBONE.DEPTH, num_heads=12, mlp_ratio=config.MODEL.BACKBONE.MLP_RATIO, qkv_bias=True,
-            norm_layer=partial(nn.LayerNorm, eps=1e-6), drop_path_rate=0.1)
+            norm_layer=partial(nn.LayerNorm, eps=1e-6), drop_path_rate=0.1,
+            remove_layers=config.TRAIN.REMOVE_LAYERS)
     else:
         raise KeyError(f"VIT_TYPE shoule set to 'large_patch16' or 'base_patch16'")
 
-    if config.MODEL.BACKBONE.PRETRAINED and train:
-        ckpt_path = config.MODEL.BACKBONE.PRETRAINED_PATH
-        ckpt = torch.load(ckpt_path, map_location='cpu', weights_only = False)
-        
-        # TRÍCH XUẤT STATE_DICT TỪ BÊN TRONG CHECKPOINT
-        if 'net' in ckpt:
-            ckpt = ckpt['net']
-        elif 'model' in ckpt:
-            ckpt = ckpt['model']
-        elif 'state_dict' in ckpt:
-            ckpt = ckpt['state_dict']
-
-        new_dict = {}
-        for k, v in ckpt.items():
-            if 'pos_embed' not in k and 'mask_token' not in k:
-                # Vẫn giữ logic cắt bỏ 'backbone.' phòng trường hợp các key bên trong 'net' có tiền tố này
-                if k.startswith('backbone.'):
-                    new_key = k.replace('backbone.', '', 1)
-                else:
-                    new_key = k
-                
-                new_dict[new_key] = v
-                
-        missing_keys, unexpected_keys = vit.load_state_dict(new_dict, strict=False)
-        if is_main_process():
-            print("Load pretrained model from {}\n".format(ckpt_path))
-            print("missing keys:", missing_keys)
-            print("unexpected keys:", unexpected_keys)
-            print("Loading pretrained ViT done.")
     return vit
 
 
@@ -349,7 +324,7 @@ class MixFormer(nn.Module):
         self.box_head = box_head
         self.head_type = head_type
 
-    def forward(self, template, online_template, search, softmax, run_score_head=True, gt_bboxes=None):
+    def forward(self, template, online_template, search, softmax, remove_rate_cur_epoch):
         # search: (b, c, h, w)
         if template.dim() == 5:
             template = template.squeeze(0)
@@ -357,13 +332,13 @@ class MixFormer(nn.Module):
             online_template = online_template.squeeze(0)
         if search.dim() == 5:
             search = search.squeeze(0)
-        template, online_template, search, reg_tokens, distill_feat_list = self.backbone(template, online_template, search)
+        template, online_template, search, reg_tokens, distill_feat_list = self.backbone(template, online_template, search, remove_rate_cur_epoch)
         # Forward the corner head and score head
         out = self.forward_head(search, reg_tokens=reg_tokens, softmax=softmax)
         out['reg_tokens'] = reg_tokens
         out['distill_feat_list'] = distill_feat_list
 
-        return out['pred_boxes']
+        return out
 
     def forward_test(self, search, softmax, run_score_head=True, gt_bboxes=None):
         # search: (b, c, h, w)
@@ -422,5 +397,17 @@ def build_mixformer_vit(cfg, train=False) -> MixFormer:
         box_head,
         head_type=cfg.MODEL.HEAD_TYPE
     )
+
+    # convert checkpoint
+    if cfg.MODEL.BACKBONE.PRETRAINED and train:
+        ckpt_path = cfg.MODEL.BACKBONE.PRETRAINED_PATH
+        ckpt: Dict[str, torch.Tensor] = torch.load(ckpt_path, map_location='cpu')['net']
+        new_ckpt = remove_layers(ckpt, cfg.TRAIN.INVALID_LAYERS)
+        missing_keys, unexpected_keys = model.load_state_dict(new_ckpt, strict=False)
+        if is_main_process():
+            print("Load pretrained model from {}".format(ckpt_path))
+            print("missing keys:", missing_keys)
+            print("unexpected keys:", unexpected_keys)
+            print("Loading pretrained model done.")
 
     return model
