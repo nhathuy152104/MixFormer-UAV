@@ -60,7 +60,7 @@ def build_box_head(cfg):
         feat_sz = cfg.MODEL.FEAT_SZ
         stride = cfg.DATA.SEARCH.SIZE / feat_sz
         print("feat size: ", feat_sz, ", stride: ", stride)
-        hidden_dim = cfg.MODEL.HIDDEN_DIM
+        hidden_dim = 384
         mlp_head = MlpHead(
             in_dim=hidden_dim,
             hidden_dim=hidden_dim,
