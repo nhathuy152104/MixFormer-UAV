@@ -27,24 +27,20 @@ network.eval()
 
 network = network.cpu()
 
-# Đảm bảo self.indice trong lớp Head nằm trên CPU (sửa lỗi lệch device)
 for m in network.modules():
     if hasattr(m, 'indice') and isinstance(m.indice, torch.Tensor):
         m.indice = m.indice.cpu()
 
-# 2. Tạo Dummy Inputs trên CPU
 template_input = torch.randn(1, 3, 128, 128, device='cpu').float()
 onlinetemplate_input = torch.randn(1, 3, 128, 128, device='cpu').float()
 search_input = torch.randn(1, 3, 288, 288, device='cpu').float()
 
-# 3. Tạo Wrapper để giấu các biến boolean (softmax, run_score_head) khỏi ONNX Tracer
 class MixFormerONNXWrapper(torch.nn.Module):
     def __init__(self, model):
         super().__init__()
         self.model = model
 
     def forward(self, template, online_template, search):
-        # Trả về trực tiếp pred_boxes (có thể tuỳ chỉnh tùy vào hàm forward của bạn)
         return self.model(
             template=template, 
             online_template=online_template, 
@@ -56,8 +52,7 @@ class MixFormerONNXWrapper(torch.nn.Module):
 onnx_model = MixFormerONNXWrapper(network)
 onnx_model.eval()
 
-onnx_file_path = "mixformer2_vit_opset10.onnx"
-print("Đang tiến hành export sang ONNX (Opset 10)...")
+onnx_file_path = "mixformer2_vit.onnx"
 
 # 4. Export sang ONNX với Opset 10
 with torch.no_grad():
@@ -66,7 +61,7 @@ with torch.no_grad():
         (template_input, onlinetemplate_input, search_input),
         onnx_file_path,
         export_params=True,
-        opset_version=12,           # <--- CHỈ ĐỊNH PHIÊN BẢN 10
+        opset_version=12,          
         do_constant_folding=True,
         input_names=['template', 'online_template', 'search'],
         output_names=['pred_boxes'],

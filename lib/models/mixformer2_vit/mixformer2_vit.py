@@ -38,24 +38,24 @@ class PatchEmbed(nn.Module):
         self.flatten = flatten
         hidden_dim = embed_dim // 2  # Hoặc 64/128 tùy dung lượng model
         self.proj = nn.Sequential(
-            # Stage 1: Downsample 2x (Stride 2)
-            nn.Conv2d(in_chans, hidden_dim // 4, kernel_size=3, stride=2, padding=1),
-            nn.BatchNorm2d(hidden_dim // 4),
-            nn.ReLU(),
-            
-            # Stage 2: Downsample 4x (Stride 2)
-            nn.Conv2d(hidden_dim // 4, hidden_dim // 2, kernel_size=3, stride=2, padding=1),
-            nn.BatchNorm2d(hidden_dim // 2),
-            nn.ReLU(),
-            
-            # Stage 3: Downsample 8x (Stride 2)
-            nn.Conv2d(hidden_dim // 2, hidden_dim, kernel_size=3, stride=2, padding=1),
-            nn.BatchNorm2d(hidden_dim),
-            nn.ReLU(),
-            
-            # Stage 4: Downsample 16x (Stride 2)
-            nn.Conv2d(hidden_dim, embed_dim, kernel_size=3, stride=2, padding=1),
-        )
+        # Stage 1: Downsample 2x (Stride 2)
+        nn.Conv2d(in_chans, hidden_dim // 4, kernel_size=3, stride=2, padding=1),
+        nn.BatchNorm2d(hidden_dim // 4),
+        nn.ReLU(),
+        
+        # Stage 2: Downsample 4x (Stride 2)
+        nn.Conv2d(hidden_dim // 4, hidden_dim // 2, kernel_size=3, stride=2, padding=1),
+        nn.BatchNorm2d(hidden_dim // 2),
+        nn.ReLU(),
+        
+        # Stage 3: Downsample 8x (Stride 2)
+        nn.Conv2d(hidden_dim // 2, hidden_dim, kernel_size=3, stride=2, padding=1),
+        nn.BatchNorm2d(hidden_dim),
+        nn.ReLU(),
+        
+        # Stage 4: Downsample 16x (Stride 2)
+        nn.Conv2d(hidden_dim, embed_dim, kernel_size=3, stride=2, padding=1),
+    )
         self.norm = norm_layer(embed_dim) if norm_layer else nn.Identity()
 
     def forward(self, x):
@@ -279,7 +279,6 @@ class VisionTransformer(timm.models.vision_transformer.VisionTransformer):
         x = rearrange(x, 'b (h w) c -> b c h w', h=H_s, w=H_s)
 
         return self.template, x, reg_tokens
-
     def set_online(self, x_t, x_ot):
         x_t = self.patch_embed(x_t)
         x_ot = self.patch_embed(x_ot)
@@ -304,7 +303,7 @@ class VisionTransformer(timm.models.vision_transformer.VisionTransformer):
 
 def get_mixformer_vit(config, train):
     img_size_s = config.DATA.SEARCH.SIZE
-    img_size_t = config.DATA.TEMPLATE.SIZE
+    img_size_t = 224
     if config.MODEL.VIT_TYPE == 'large_patch16':
         vit = VisionTransformer(
             img_size_s=img_size_s, img_size_t=img_size_t,
@@ -313,7 +312,7 @@ def get_mixformer_vit(config, train):
     elif config.MODEL.VIT_TYPE == 'base_patch16':
         vit = VisionTransformer(
             img_size_s=img_size_s, img_size_t=img_size_t,
-            patch_size=16, embed_dim=384, depth=config.MODEL.BACKBONE.DEPTH, num_heads=12, mlp_ratio=config.MODEL.BACKBONE.MLP_RATIO, qkv_bias=True,
+            patch_size=16, embed_dim=768, depth=config.MODEL.BACKBONE.DEPTH, num_heads=12, mlp_ratio=config.MODEL.BACKBONE.MLP_RATIO, qkv_bias=True,
             norm_layer=partial(nn.LayerNorm, eps=1e-6), drop_path_rate=0.1)
     else:
         raise KeyError(f"VIT_TYPE shoule set to 'large_patch16' or 'base_patch16'")
