@@ -272,8 +272,8 @@ class VisionTransformer(timm.models.vision_transformer.VisionTransformer):
 
 
 def get_mixformer_vit(config, train):
-    img_size_s = config.DATA.SEARCH.SIZE
-    img_size_t = config.DATA.TEMPLATE.SIZE
+    img_size_s = 224
+    img_size_t = 112
     if config.MODEL.VIT_TYPE == 'large_patch16':
         vit = VisionTransformer(
             img_size_s=img_size_s, img_size_t=img_size_t,
@@ -282,7 +282,7 @@ def get_mixformer_vit(config, train):
     elif config.MODEL.VIT_TYPE == 'base_patch16':
         vit = VisionTransformer(
             img_size_s=img_size_s, img_size_t=img_size_t,
-            patch_size=16, embed_dim=768, depth=12, num_heads=12, mlp_ratio=4, qkv_bias=True,
+            patch_size=16, embed_dim=384, depth=4, num_heads=12, mlp_ratio=4, qkv_bias=True,
             norm_layer=partial(nn.LayerNorm, eps=1e-6), drop_path_rate=0.1)
     else:
         raise KeyError(f"VIT_TYPE shoule set to 'large_patch16' or 'base_patch16'")
