@@ -31,9 +31,9 @@ for m in network.modules():
     if hasattr(m, 'indice') and isinstance(m.indice, torch.Tensor):
         m.indice = m.indice.cpu()
 
-template_input = torch.randn(1, 3, 128, 128, device='cpu').float()
-onlinetemplate_input = torch.randn(1, 3, 128, 128, device='cpu').float()
-search_input = torch.randn(1, 3, 288, 288, device='cpu').float()
+template_input = torch.randn(1, 3, 112, 112, device='cpu').float()
+onlinetemplate_input = torch.randn(1, 3, 112, 112, device='cpu').float()
+search_input = torch.randn(1, 3, 224, 224, device='cpu').float()
 
 class MixFormerONNXWrapper(torch.nn.Module):
     def __init__(self, model):
