@@ -4,7 +4,7 @@ from rknn.api import RKNN
 
 DATASET_PATH = '/home/arsene_lupin/HuyWorkspace/VtWork/OSTrack-Rockchip/path.txt'
 DEFAULT_RKNN_PATH = 'ostrack.rknn'
-DEFAULT_QUANT = False # Khuyến nghị test FP16 trước với ViT
+DEFAULT_QUANT = True # Khuyến nghị test FP16 trước với ViT
 
 def parse_arg():
     if len(sys.argv) < 3:

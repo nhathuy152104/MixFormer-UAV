@@ -32,12 +32,31 @@ to_2tuple = _ntuple(2)
 class PatchEmbed(nn.Module):
     """ 2D Image to Patch Embedding
     """
-    def __init__(self, patch_size=16, in_chans=3, embed_dim=768, norm_layer=None, flatten=True):
+    # ĐÃ SỬA: embed_dim=768 -> embed_dim=384
+    def __init__(self, patch_size=16, in_chans=3, embed_dim=384, norm_layer=None, flatten=True):
         super().__init__()
         patch_size = to_2tuple(patch_size)
         self.flatten = flatten
-
-        self.proj = nn.Conv2d(in_chans, embed_dim, kernel_size=patch_size, stride=patch_size)
+        hidden_dim = embed_dim // 2  # Với 384 -> hidden_dim = 192
+        self.proj = nn.Sequential(
+            # Stage 1: Downsample 2x (Stride 2) - hidden_dim // 4 = 48
+            nn.Conv2d(in_chans, hidden_dim // 4, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(hidden_dim // 4),
+            nn.ReLU(),
+            
+            # Stage 2: Downsample 4x (Stride 2) - hidden_dim // 2 = 96
+            nn.Conv2d(hidden_dim // 4, hidden_dim // 2, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(hidden_dim // 2),
+            nn.ReLU(),
+            
+            # Stage 3: Downsample 8x (Stride 2) - hidden_dim = 192
+            nn.Conv2d(hidden_dim // 2, hidden_dim, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(hidden_dim),
+            nn.ReLU(),
+            
+            # Stage 4: Downsample 16x (Stride 2) - embed_dim = 384
+            nn.Conv2d(hidden_dim, embed_dim, kernel_size=3, stride=2, padding=1),
+        )
         self.norm = norm_layer(embed_dim) if norm_layer else nn.Identity()
 
     def forward(self, x):
@@ -46,7 +65,6 @@ class PatchEmbed(nn.Module):
             x = x.flatten(2).transpose(1, 2).contiguous()  # BCHW -> BNC
         x = self.norm(x)
         return x
-
 
 class Attention(nn.Module):
     def __init__(self, dim, num_heads=8, qkv_bias=False, attn_drop=0., proj_drop=0.):
